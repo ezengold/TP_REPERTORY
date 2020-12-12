@@ -1,50 +1,45 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+
 #include "Contact.h"
+
+typedef long long unsigned int llui;
 
 using namespace std;
 
-string Contact::storage = "storage.txt";
-ifstream Contact::storage_reader("storage.txt");
-ofstream Contact::storage_writer("storage.txt", ios::app);
-
-bool nameExists(string NAME);
-bool phoneExists(string NAME);
-bool emailExists(string NAME);
-std::vector<std::string> split(const std::string &, const std::string &);
-
-Contact::Contact()
-{
-}
+string Contact::storage = "storage/storage.txt";
+void removeLine(long, string);
 
 Contact::Contact(string NAME, string PHONE, string EMAIL)
 {
-    if (!storage_writer)
-    {
-        storage_writer.open(storage, ios::app);
-    }
+    this->name = NAME;
+    this->phone = PHONE;
+    this->email = EMAIL;
+}
 
-    if (storage_writer)
-    {
-        if (!nameExists(NAME) && !phoneExists(PHONE))
-        {
-            this->name = NAME;
-            this->phone = PHONE;
-            this->email = EMAIL;
+void Contact::save()
+{
+    ofstream storage_writer(storage, ios::app);
 
-            storage_writer << this->name + "%" + this->phone + "%" + this->email;
-        }
-        else
-        {
-            cout << "\n Echec d'enregistrement ! Contact existant deja !\n";
-        }
+    if (storage_writer.is_open())
+    {
+        string ligne = this->name + "%" + this->phone + "%" + this->email;
+        storage_writer << ligne << endl;
         storage_writer.close();
     }
     else
     {
-        cout << "\n Echec d'enregistrement ! Memoire inacessible !\n";
+        cout << "\n Echec d'enregistrement ! Memoire inacessible !\n\n ";
+        system("pause");
     }
+}
+
+void Contact::deleteContact(long ORDER)
+{
+    removeLine(ORDER, storage);
+    this->~Contact();
 }
 
 void Contact::setName(string NAME)
@@ -77,114 +72,41 @@ string Contact::getEmail()
     return this->email;
 }
 
-void Contact::remove()
-{
-}
-
 string Contact::description()
 {
     return this->name + "\t" + this->phone + "\t" + this->email;
 }
 
-vector<Contact *> Contact::load()
-{
-    vector<Contact *> contacts;
-
-    string location = "storage.txt";
-    storage_reader.open(location.c_str());
-
-    if (storage_reader.fail())
-    {
-        cout << "\n Echec de lecture ! Memoire inacessible !\n";
-        return contacts;
-    }
-
-    string line;
-    while (getline(storage_reader, line))
-    {
-        cout << line << endl;
-        // vector<string> data = split(line, "%");
-        // contacts.push_back(new Contact(data[0], data[1], data[2]));
-        storage_reader.close();
-    }
-
-    return contacts;
-}
-
 Contact::~Contact()
 {
-    storage_reader.close();
-    storage_writer.close();
 }
 
-// FUNCTIONS
-vector<string> split(const string &str, const string &delim)
+void removeLine(long order, string path)
 {
-    vector<string> tokens;
-    size_t prev = 0, pos = 0;
-    do
+
+    string line;
+    ifstream fin;
+
+    fin.open(path);
+    // contents of path must be copied to a temp file then
+    // renamed back to the path file
+    ofstream temp;
+    temp.open("temp.txt");
+    long position(0);
+
+    while (getline(fin, line))
     {
-        pos = str.find(delim, prev);
-        if (pos == string::npos)
-        {
-            pos = str.length();
-        }
-
-        string token = str.substr(prev, pos - prev);
-
-        if (!token.empty())
-        {
-            tokens.push_back(token);
-        }
-        prev = pos + delim.length();
-    } while (pos < str.length() && prev < str.length());
-    return tokens;
-}
-
-bool nameExists(string NAME)
-{
-    vector<Contact *> contacts = Contact::load();
-
-    for (long i = 0; i < contacts.size(); i++)
-    {
-        Contact *contact = contacts[i];
-
-        if (contact->getName().compare(NAME) == 0)
-        {
-            return true;
-        }
+        position++;
+        // write all lines to temp other than the line marked for erasing
+        if (position != order)
+            temp << line << endl;
     }
-    return false;
-}
 
-bool phoneExists(string PHONE)
-{
-    vector<Contact *> contacts = Contact::load();
+    temp.close();
+    fin.close();
 
-    for (long i = 0; i < contacts.size(); i++)
-    {
-        Contact *contact = contacts[i];
-
-        if (contact->getPhone().compare(PHONE) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool emailExists(string EMAIL)
-{
-    vector<Contact *> contacts = Contact::load();
-
-    for (long i = 0; i < contacts.size(); i++)
-    {
-        Contact *contact = contacts[i];
-
-        if (contact->getEmail().compare(EMAIL) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
+    // required conversion for remove and rename functions
+    const char *p = path.c_str();
+    remove(p);
+    rename("temp.txt", p);
 }
